@@ -97,12 +97,26 @@
           (seq-filter #'listp
                       (cddar (bluesound/-GET "Status")))))
 
+(defun bluesound/sync-status ()
+  "Return alist of sync status."
+  (cadar (bluesound/-GET "SyncStatus")))
+
+(defun bluesound/player-name ()
+  "Return player name."
+  (cdr (assoc 'name (bluesound/sync-status))))
+
+(defun bluesound/message (string-format &rest args)
+  "Wrapper around `message' passing STRING-FORMAT and ARGS to `format'."
+  (message "Player %s %s"
+           (bluesound/player-name)
+           (apply #'format string-format args)))
+
 ;;;###autoload
 (defun bluesound/volume-set (level)
   "Set player volume to LEVEL."
   (interactive "nVolume level: ")
   (bluesound/-GET (concat "Volume?level=" (number-to-string level)))
-  (message "Player volume set to: %d" level))
+  (bluesound/message "volume set to: %d" level))
 
 (defun bluesound/volume ()
   "Read volume from player."
@@ -126,14 +140,14 @@
   "Pause player."
   (interactive)
   (bluesound/-GET "Pause")
-  (message "Player paused"))
+  (bluesound/message "paused"))
 
 ;;;###autoload
 (defun bluesound/resume ()
   "Resume player."
   (interactive)
   (bluesound/-GET "Play")
-  (message "Player resumed"))
+  (bluesound/message "resumed"))
 
 ;;;###autoload
 (defun bluesound/pause-resume ()
@@ -187,7 +201,7 @@
      (concat "Add?service=LocalMusic&playnow=1&where=last&cursor=last"
              "&artist=" (url-hexify-string (car artist-album))
              "&album=" (url-hexify-string (cadr artist-album))))
-    (message "Playing: %s" album)))
+    (bluesound/message "playing album: %s" album)))
 
 ;;;###autoload
 (defun bluesound/play-album (album)
@@ -219,7 +233,7 @@
   (when preset
     (when-let (id (cdr (assoc preset (bluesound/presets))))
       (bluesound/-GET (concat "Preset?id=" id))
-      (message "Playing: %s" preset))))
+      (bluesound/message "playing preset: %s" preset))))
 
 ;;;###autoload
 (defun bluesound/next ()
@@ -244,7 +258,7 @@
                                    (cdr (assoc 'title3 status))
                                    (cdr (assoc 'title1 status))))
                  "  /  ")))
-    (message "Playing: %s" title)
+    (bluesound/message "currently playing: %s" title)
     title))
 
 (provide 'bluesound)
