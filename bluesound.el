@@ -263,35 +263,56 @@
 
 ;;;###autoload (autoload 'bluesound/select-player "bluesound" "Select PLAYER-NAME as player." t)
 (eval-and-compile
-  (when (and (string= "gnu/linux" system-type) (featurep 'dbusbind))
-    (require 'zeroconf)
-    (zeroconf-init)
+  (when (string= "gnu/linux" system-type)
+    (defcustom bluesound-avahi-browse-command "avahi-browse"
+      "Shell command to discover players in the network."
+      :group 'bluesound
+      :type 'string)
 
-    ;;;###autoload
+    (defcustom bluesound-avahi-browse-args "--terminate --parsable --resolve --no-db-lookup _musc._tcp"
+      "Command arguments to `avahi-browse' to discover players."
+      :group 'bluesound
+      :type 'string)
+
+    (defun bluesound/-avahi-players ()
+      "Returns a list of conses of ip and port of players in the network."
+      (unless (executable-find bluesound-avahi-browse-command)
+        (error "Can not find `%s' shell command" bluesound-avahi-browse-command))
+      (mapcar (lambda (s)
+                (let ((vs (split-string s ";")))
+                  (cons (nth 7 vs)
+                        (string-to-number (nth 8 vs)))))
+              (seq-filter (lambda (s) (string-prefix-p "=" s))
+                          (split-string (shell-command-to-string (concat bluesound-avahi-browse-command
+                                                                         " "
+                                                                         bluesound-avahi-browse-args))
+                                        "\n"))))
+
     (defun bluesound/select-player (player-name)
       "Select PLAYER-NAME as player."
       (interactive
        (list
         (completing-read "Player: "
-                         (mapcar (lambda (service)
-                                   (let ((bluesound-host (zeroconf-service-address service)))
-                                     (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))))
-                                 (zeroconf-list-services "_musc._tcp")))))
+                         (sort
+                          (mapcar (lambda (service)
+                                    (let ((bluesound-host (car service))
+                                          (bluesound-port (cdr service)))
+                                      (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))))
+                                  (bluesound/-avahi-players))
+                          #'string-lessp))))
       (let* ((alist (mapcar (lambda (service)
-                              (let ((bluesound-host (zeroconf-service-address service))
-                                    (bluesound-port (zeroconf-service-port service)))
+                              (let ((bluesound-host (car service))
+                                    (bluesound-port (cdr service)))
                                 (cons (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))
                                       (cons bluesound-host bluesound-port))))
-                            (zeroconf-list-services "_musc._tcp")))
+                            (bluesound/-avahi-players)))
              (ip-port (cdr (assoc player-name alist))))
-        (message "%s" ip-port)
         (if ip-port
             (progn
               (setq bluesound-host (car ip-port)
                     bluesound-port (cdr ip-port))
-              (message "%s at %s:%d" player-name bluesound-host bluesound-port))
+              (bluesound/current))
           (error "Player %s not found" player-name))))))
-
 
 (provide 'bluesound)
 
