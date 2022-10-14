@@ -107,7 +107,7 @@
 
 (defun bluesound/message (string-format &rest args)
   "Wrapper around `message' passing STRING-FORMAT and ARGS to `format'."
-  (message "Player %s %s"
+  (message "%s: %s"
            (bluesound/player-name)
            (apply #'format string-format args)))
 
@@ -116,7 +116,7 @@
   "Set player volume to LEVEL."
   (interactive "nVolume level: ")
   (bluesound/-GET (concat "Volume?level=" (number-to-string level)))
-  (bluesound/message "volume set to: %d" level))
+  (bluesound/message "volume set to %d" level))
 
 (defun bluesound/volume ()
   "Read volume from player."
@@ -200,8 +200,7 @@
     (bluesound/-GET
      (concat "Add?service=LocalMusic&playnow=1&where=last&cursor=last"
              "&artist=" (url-hexify-string (car artist-album))
-             "&album=" (url-hexify-string (cadr artist-album))))
-    (bluesound/message "playing album: %s" album)))
+             "&album=" (url-hexify-string (cadr artist-album))))))
 
 ;;;###autoload
 (defun bluesound/play-album (album)
@@ -213,7 +212,8 @@
                                (concat (car album) "  /  " (cdr album)))
                              (bluesound/albums)))))
   (when album
-    (bluesound/add album)))
+    (bluesound/add album)
+    (bluesound/current)))
 
 (defun bluesound/presets ()
   "Return an alist of presets."
@@ -233,7 +233,7 @@
   (when preset
     (when-let (id (cdr (assoc preset (bluesound/presets))))
       (bluesound/-GET (concat "Preset?id=" id))
-      (bluesound/message "playing preset: %s" preset))))
+      (bluesound/current))))
 
 ;;;###autoload
 (defun bluesound/next ()
@@ -257,8 +257,11 @@
                              (list (cdr (assoc 'title2 status))
                                    (cdr (assoc 'title3 status))
                                    (cdr (assoc 'title1 status))))
-                 "  /  ")))
-    (bluesound/message "currently playing: %s" title)
+                 "  /  "))
+         (suffix (if (equal "pause" (cdr (assoc 'state status)))
+                     " (paused)"
+                   "")))
+    (bluesound/message "%s%s" title suffix)
     title))
 
 ;;;###autoload (autoload 'bluesound/select-player "bluesound" "Select PLAYER-NAME as player." t)
