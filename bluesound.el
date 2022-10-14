@@ -261,33 +261,36 @@
     (bluesound/message "currently playing: %s" title)
     title))
 
-(require 'zeroconf)
-(zeroconf-init)
+;;;###autoload (autoload 'bluesound/select-player "bluesound" "Select PLAYER-NAME as player." t)
+(eval-and-compile
+  (when (and (string= "gnu/linux" system-type) (featurep 'dbusbind))
+    (require 'zeroconf)
+    (zeroconf-init)
 
-;;;###autoload
-(defun bluesound/select-player (player-name)
-  "Select PLAYER-NAME as player."
-  (interactive
-   (list
-    (completing-read "Player: "
-                     (mapcar (lambda (service)
-                               (let ((bluesound-host (zeroconf-service-address service)))
-                                 (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))))
-                             (zeroconf-list-services "_musc._tcp")))))
-  (let* ((alist (mapcar (lambda (service)
-                          (let ((bluesound-host (zeroconf-service-address service))
-                                (bluesound-port (zeroconf-service-port service)))
-                            (cons (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))
-                                  (cons bluesound-host bluesound-port))))
-                        (zeroconf-list-services "_musc._tcp")))
-         (ip-port (cdr (assoc player-name alist))))
-    (message "%s" ip-port)
-    (if ip-port
-        (progn
-          (setq bluesound-host (car ip-port)
-                bluesound-port (cdr ip-port))
-          (message "%s at %s:%d" player-name bluesound-host bluesound-port))
-      (error "Player %s not found" player-name))))
+    ;;;###autoload
+    (defun bluesound/select-player (player-name)
+      "Select PLAYER-NAME as player."
+      (interactive
+       (list
+        (completing-read "Player: "
+                         (mapcar (lambda (service)
+                                   (let ((bluesound-host (zeroconf-service-address service)))
+                                     (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))))
+                                 (zeroconf-list-services "_musc._tcp")))))
+      (let* ((alist (mapcar (lambda (service)
+                              (let ((bluesound-host (zeroconf-service-address service))
+                                    (bluesound-port (zeroconf-service-port service)))
+                                (cons (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))
+                                      (cons bluesound-host bluesound-port))))
+                            (zeroconf-list-services "_musc._tcp")))
+             (ip-port (cdr (assoc player-name alist))))
+        (message "%s" ip-port)
+        (if ip-port
+            (progn
+              (setq bluesound-host (car ip-port)
+                    bluesound-port (cdr ip-port))
+              (message "%s at %s:%d" player-name bluesound-host bluesound-port))
+          (error "Player %s not found" player-name))))))
 
 
 (provide 'bluesound)
