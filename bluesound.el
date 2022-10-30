@@ -4,6 +4,7 @@
 
 ;; Author: R.W. van 't Veer
 ;; Version: 0.1
+;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: convenience multimedia
 ;; URL: https://git.sr.ht/~rwv/bluesound-el/
 
@@ -44,7 +45,7 @@
   :group 'bluesound
   :type 'integer)
 
-(defun bluesound/-GET (path)
+(defun bluesound--GET (path)
   "Do a GET with PATH to player and return parsed XMl."
   (when (not bluesound-host)
     (error "Value of `bluesound-host' unset"))
@@ -55,7 +56,7 @@
       (forward-line)
       (xml-parse-region (point) (point-max)))))
 
-(defun bluesound/-query (path nodelist)
+(defun bluesound--query (path nodelist)
   "Query PATH on NODELIST and return first matching element."
   (let (result)
     (while (and (not result) nodelist)
@@ -64,10 +65,10 @@
         (setq result (car nodelist)))
       (setq nodelist (cdr nodelist)))
     (if (cdr path)
-        (bluesound/-query (cdr path) result)
+        (bluesound--query (cdr path) result)
       result)))
 
-(defun bluesound/-query-all (path nodelist)
+(defun bluesound--query-all (path nodelist)
   "Query PATH on NODELIST and return matching elements."
   (let (result)
     (while nodelist
@@ -76,182 +77,182 @@
         (setq result (cons (car nodelist) result)))
       (setq nodelist (cdr nodelist)))
     (if (cdr path)
-        (bluesound/-query-all (cdr path) (cddar result))
+        (bluesound--query-all (cdr path) (cddar result))
       (reverse result))))
 
-(defun bluesound/-attr (name element)
+(defun bluesound--attr (name element)
   "Get attribute NAME from ELEMENT."
   (when-let (value (cdr (assoc name (cadr element))))
     (decode-coding-string value 'utf-8)))
 
-(defun bluesound/-text (element)
+(defun bluesound--text (element)
   "Get text directly inside ELEMENT."
   (let ((node (caddr element)))
     (when (stringp node)
       (decode-coding-string node 'utf-8))))
 
-(defun bluesound/status ()
+(defun bluesound-status ()
   "Return status of player as alist."
   (mapcar (lambda (n)
-            (cons (car n) (bluesound/-text n)))
+            (cons (car n) (bluesound--text n)))
           (seq-filter #'listp
-                      (cddar (bluesound/-GET "Status")))))
+                      (cddar (bluesound--GET "Status")))))
 
-(defun bluesound/sync-status ()
+(defun bluesound-sync-status ()
   "Return alist of sync status."
-  (cadar (bluesound/-GET "SyncStatus")))
+  (cadar (bluesound--GET "SyncStatus")))
 
-(defun bluesound/player-name ()
+(defun bluesound-player-name ()
   "Return player name."
-  (cdr (assoc 'name (bluesound/sync-status))))
+  (cdr (assoc 'name (bluesound-sync-status))))
 
-(defun bluesound/message (string-format &rest args)
+(defun bluesound-message (string-format &rest args)
   "Wrapper around `message' passing STRING-FORMAT and ARGS to `format'."
   (message "%s: %s"
-           (bluesound/player-name)
+           (bluesound-player-name)
            (apply #'format string-format args)))
 
 ;;;###autoload
-(defun bluesound/volume-set (level)
+(defun bluesound-volume-set (level)
   "Set player volume to LEVEL."
   (interactive "nVolume level: ")
-  (bluesound/-GET (concat "Volume?level=" (number-to-string level)))
-  (bluesound/message "volume set to %d" level))
+  (bluesound--GET (concat "Volume?level=" (number-to-string level)))
+  (bluesound-message "volume set to %d" level))
 
-(defun bluesound/volume ()
+(defun bluesound-volume ()
   "Read volume from player."
   (string-to-number
-   (cdr (assoc 'volume (bluesound/status)))))
+   (cdr (assoc 'volume (bluesound-status)))))
 
 ;;;###autoload
-(defun bluesound/volume-up ()
+(defun bluesound-volume-up ()
   "Turn player volume level up."
   (interactive)
-  (bluesound/volume-set (+ (bluesound/volume) 1)))
+  (bluesound-volume-set (+ (bluesound-volume) 1)))
 
 ;;;###autoload
-(defun bluesound/volume-down ()
+(defun bluesound-volume-down ()
   "Turn player volume level down."
   (interactive)
-  (bluesound/volume-set (- (bluesound/volume) 1)))
+  (bluesound-volume-set (- (bluesound-volume) 1)))
 
 ;;;###autoload
-(defun bluesound/pause ()
+(defun bluesound-pause ()
   "Pause player."
   (interactive)
-  (bluesound/-GET "Pause")
-  (bluesound/message "paused"))
+  (bluesound--GET "Pause")
+  (bluesound-message "paused"))
 
 ;;;###autoload
-(defun bluesound/resume ()
+(defun bluesound-resume ()
   "Resume player."
   (interactive)
-  (bluesound/-GET "Play")
-  (bluesound/message "resumed"))
+  (bluesound--GET "Play")
+  (bluesound-message "resumed"))
 
 ;;;###autoload
-(defun bluesound/pause-resume ()
+(defun bluesound-pause-resume ()
   "Toggle between playing and pausing player."
   (interactive)
-  (let ((state (cdr (assoc 'state (bluesound/status)))))
+  (let ((state (cdr (assoc 'state (bluesound-status)))))
     (if (or (equal state "play")
             (equal state "stream"))
-        (bluesound/pause)
-      (bluesound/resume))))
+        (bluesound-pause)
+      (bluesound-resume))))
 
 ;;;###autoload
-(defun bluesound/play (url)
+(defun bluesound-play (url)
   "Play an stream from an URL."
   (interactive "sPlay URL: ")
-  (bluesound/-GET (concat "Play?url="
+  (bluesound--GET (concat "Play?url="
                           (url-hexify-string url))))
 
-(defun bluesound/albums-section (section)
+(defun bluesound-albums-section (section)
   "SECTION is A..Z or #.  Return list of artist/albums pairs."
-  (let ((items (bluesound/-query-all
+  (let ((items (bluesound--query-all
                 '(albums sections section album)
-                (bluesound/-GET (concat "Albums?service=LocalMusic"
+                (bluesound--GET (concat "Albums?service=LocalMusic"
                                         "&section="
                                         (url-hexify-string section))))))
     (when items
       (mapcar (lambda (n)
-                (cons (bluesound/-text (bluesound/-query '(art) (cddr n)))
-                      (bluesound/-text (bluesound/-query '(title) (cddr n)))))
+                (cons (bluesound--text (bluesound--query '(art) (cddr n)))
+                      (bluesound--text (bluesound--query '(title) (cddr n)))))
               items))))
 
-(defvar bluesound/album-cache nil)
+(defvar bluesound-album-cache nil)
 
-(defun bluesound/albums ()
+(defun bluesound-albums ()
   "Return list of all albums."
-  (if bluesound/album-cache
-      bluesound/album-cache
-    (setq bluesound/album-cache
+  (if bluesound-album-cache
+      bluesound-album-cache
+    (setq bluesound-album-cache
           (seq-sort-by
            (lambda (n) (downcase (string-trim (concat (car n) (cdr n)))))
            #'string-lessp
            (mapcan (lambda (byte)
-                     (bluesound/albums-section
+                     (bluesound-albums-section
                       (byte-to-string byte)))
                    "#ABCDEFGHIJKLMNOPQRSTUVWXYZ")))))
 
-(defun bluesound/add (album)
+(defun bluesound-add (album)
   "Add ALBUM to end of player's playlist and start playing."
   (let ((artist-album (split-string album "  /  ")))
-    (bluesound/-GET
+    (bluesound--GET
      (concat "Add?service=LocalMusic&playnow=1&where=last&cursor=last"
              "&artist=" (url-hexify-string (car artist-album))
              "&album=" (url-hexify-string (cadr artist-album))))))
 
 ;;;###autoload
-(defun bluesound/play-album (album)
+(defun bluesound-play-album (album)
   "Play an ALBUM on player."
   (interactive
    (list
     (completing-read "Play: "
                      (mapcar (lambda (album)
                                (concat (car album) "  /  " (cdr album)))
-                             (bluesound/albums)))))
+                             (bluesound-albums)))))
   (when album
-    (bluesound/add album)
-    (bluesound/current)))
+    (bluesound-add album)
+    (bluesound-current)))
 
-(defun bluesound/presets ()
+(defun bluesound-presets ()
   "Return an alist of presets."
   (mapcar (lambda (n)
-            (cons (bluesound/-attr 'name n)
-                  (bluesound/-attr 'id n)))
-          (bluesound/-query-all '(presets preset)
-                                (bluesound/-GET "Presets"))))
+            (cons (bluesound--attr 'name n)
+                  (bluesound--attr 'id n)))
+          (bluesound--query-all '(presets preset)
+                                (bluesound--GET "Presets"))))
 
 ;;;###autoload
-(defun bluesound/preset (preset)
+(defun bluesound-preset (preset)
   "Play preset named PRESET."
   (interactive
    (list
     (completing-read "Preset: "
-                     (mapcar #'car (bluesound/presets)))))
+                     (mapcar #'car (bluesound-presets)))))
   (when preset
-    (when-let (id (cdr (assoc preset (bluesound/presets))))
-      (bluesound/-GET (concat "Preset?id=" id))
-      (bluesound/current))))
+    (when-let (id (cdr (assoc preset (bluesound-presets))))
+      (bluesound--GET (concat "Preset?id=" id))
+      (bluesound-current))))
 
 ;;;###autoload
-(defun bluesound/next ()
+(defun bluesound-next ()
   "Play next in queue."
   (interactive)
-  (bluesound/-GET "Skip"))
+  (bluesound--GET "Skip"))
 
 ;;;###autoload
-(defun bluesound/previous ()
+(defun bluesound-previous ()
   "Play previous in queue."
   (interactive)
-  (bluesound/-GET "Back"))
+  (bluesound--GET "Back"))
 
 ;;;###autoload
-(defun bluesound/current ()
+(defun bluesound-current ()
   "Show what's playing now."
   (interactive)
-  (let* ((status (bluesound/status))
+  (let* ((status (bluesound-status))
          (title (string-join
                  (seq-filter #'stringp
                              (list (cdr (assoc 'title2 status))
@@ -261,7 +262,7 @@
          (suffix (if (equal "pause" (cdr (assoc 'state status)))
                      " (paused)"
                    "")))
-    (bluesound/message "%s%s" title suffix)
+    (bluesound-message "%s%s" title suffix)
     title))
 
 (eval-and-compile
@@ -276,7 +277,7 @@
       :group 'bluesound
       :type 'string)
 
-    (defun bluesound/-avahi-players ()
+    (defun bluesound--avahi-players ()
       "Returns a list of conses of ip and port of players in the network."
       (unless (executable-find bluesound-avahi-browse-command)
         (error "Can not find `%s' shell command" bluesound-avahi-browse-command))
@@ -290,7 +291,7 @@
                                                                          bluesound-avahi-browse-args))
                                         "\n"))))
 
-    (defun bluesound/select-player (player-name)
+    (defun bluesound-select-player (player-name)
       "Select PLAYER-NAME as player."
       (interactive
        (list
@@ -299,21 +300,21 @@
                           (mapcar (lambda (service)
                                     (let ((bluesound-host (car service))
                                           (bluesound-port (cdr service)))
-                                      (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))))
-                                  (bluesound/-avahi-players))
+                                      (bluesound--attr 'name (car (bluesound--GET "SyncStatus")))))
+                                  (bluesound--avahi-players))
                           #'string-lessp))))
       (let* ((alist (mapcar (lambda (service)
                               (let ((bluesound-host (car service))
                                     (bluesound-port (cdr service)))
-                                (cons (bluesound/-attr 'name (car (bluesound/-GET "SyncStatus")))
+                                (cons (bluesound--attr 'name (car (bluesound--GET "SyncStatus")))
                                       (cons bluesound-host bluesound-port))))
-                            (bluesound/-avahi-players)))
+                            (bluesound--avahi-players)))
              (ip-port (cdr (assoc player-name alist))))
         (if ip-port
             (progn
               (setq bluesound-host (car ip-port)
                     bluesound-port (cdr ip-port))
-              (bluesound/current))
+              (bluesound-current))
           (error "Player %s not found" player-name))))))
 
 (provide 'bluesound)
