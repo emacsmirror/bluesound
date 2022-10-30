@@ -264,7 +264,6 @@
     (bluesound/message "%s%s" title suffix)
     title))
 
-;;;###autoload (autoload 'bluesound/select-player "bluesound" "Select PLAYER-NAME as player." t)
 (eval-and-compile
   (when (string= "gnu/linux" system-type)
     (defcustom bluesound-avahi-browse-command "avahi-browse"
