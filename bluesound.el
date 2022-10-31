@@ -25,7 +25,7 @@
 
 ;;; Commentary:
 
-;; The packages allows you to control your Bluesound player from
+;; This package allows you to control your Bluesound player from
 ;; Emacs.  To activate it customize `bluesound-host' to point to the
 ;; IP address or hostname of player in your network.
 
@@ -47,7 +47,7 @@
 
 (defun bluesound--GET (path)
   "Do a GET with PATH to player and return parsed XMl."
-  (when (not bluesound-host)
+  (unless bluesound-host
     (error "Value of `bluesound-host' unset"))
   (let* ((url (format "http://%s:%d/%s" bluesound-host bluesound-port path)))
     (with-current-buffer (url-retrieve-synchronously url 'silent 'no-cookies 10)
@@ -265,57 +265,59 @@
     (bluesound-message "%s%s" title suffix)
     title))
 
-(eval-and-compile
-  (when (string= "gnu/linux" system-type)
-    (defcustom bluesound-avahi-browse-command "avahi-browse"
-      "Shell command to discover players in the network."
-      :group 'bluesound
-      :type 'string)
+(defcustom bluesound-avahi-browse-command "avahi-browse"
+  "Shell command to discover players in the network."
+  :group 'bluesound
+  :type 'string)
 
-    (defcustom bluesound-avahi-browse-args "--terminate --parsable --resolve --no-db-lookup _musc._tcp"
-      "Command arguments to `avahi-browse' to discover players."
-      :group 'bluesound
-      :type 'string)
+(defcustom bluesound-avahi-browse-args
+  '("--terminate" "--parsable" "--resolve" "--no-db-lookup" "_musc._tcp")
+  "Command arguments to `avahi-browse' to discover players."
+  :group 'bluesound
+  :type '(repeat string))
 
-    (defun bluesound--avahi-players ()
-      "Returns a list of conses of ip and port of players in the network."
-      (unless (executable-find bluesound-avahi-browse-command)
-        (error "Can not find `%s' shell command" bluesound-avahi-browse-command))
-      (mapcar (lambda (s)
-                (let ((vs (split-string s ";")))
-                  (cons (nth 7 vs)
-                        (string-to-number (nth 8 vs)))))
-              (seq-filter (lambda (s) (string-prefix-p "=" s))
-                          (split-string (shell-command-to-string (concat bluesound-avahi-browse-command
-                                                                         " "
-                                                                         bluesound-avahi-browse-args))
-                                        "\n"))))
+(defun bluesound--avahi-players ()
+  "Return a list of conses of ip and port of players in the network."
+  (unless (executable-find bluesound-avahi-browse-command)
+    (user-error "Can not find `%s' shell command" bluesound-avahi-browse-command))
+  (mapcar (lambda (s)
+            (let ((vs (split-string s ";")))
+              (cons (nth 7 vs)
+                    (string-to-number (nth 8 vs)))))
+          (seq-filter (lambda (s) (string-prefix-p "=" s))
+                      (split-string (shell-command-to-string
+                                     (string-join (cons bluesound-avahi-browse-command
+                                                        (mapc #'shell-quote-argument
+                                                              bluesound-avahi-browse-args))
+                                                  " "))
+                                    "\n"))))
 
-    (defun bluesound-select-player (player-name)
-      "Select PLAYER-NAME as player."
-      (interactive
-       (list
-        (completing-read "Player: "
-                         (sort
-                          (mapcar (lambda (service)
-                                    (let ((bluesound-host (car service))
-                                          (bluesound-port (cdr service)))
-                                      (bluesound--attr 'name (car (bluesound--GET "SyncStatus")))))
-                                  (bluesound--avahi-players))
-                          #'string-lessp))))
-      (let* ((alist (mapcar (lambda (service)
-                              (let ((bluesound-host (car service))
-                                    (bluesound-port (cdr service)))
-                                (cons (bluesound--attr 'name (car (bluesound--GET "SyncStatus")))
-                                      (cons bluesound-host bluesound-port))))
-                            (bluesound--avahi-players)))
-             (ip-port (cdr (assoc player-name alist))))
-        (if ip-port
-            (progn
-              (setq bluesound-host (car ip-port)
-                    bluesound-port (cdr ip-port))
-              (bluesound-current))
-          (error "Player %s not found" player-name))))))
+;;;###autoload (autoload 'bluesound/select-player "bluesound" "Select PLAYER-NAME as player." t)
+(defun bluesound-select-player (player-name)
+  "Select PLAYER-NAME as player."
+  (interactive
+   (list
+    (completing-read "Player: "
+                     (sort
+                      (mapcar (lambda (service)
+                                (let ((bluesound-host (car service))
+                                      (bluesound-port (cdr service)))
+                                  (bluesound--attr 'name (car (bluesound--GET "SyncStatus")))))
+                              (bluesound--avahi-players))
+                      #'string-lessp))))
+  (let* ((alist (mapcar (lambda (service)
+                          (let ((bluesound-host (car service))
+                                (bluesound-port (cdr service)))
+                            (cons (bluesound--attr 'name (car (bluesound--GET "SyncStatus")))
+                                  (cons bluesound-host bluesound-port))))
+                        (bluesound--avahi-players)))
+         (ip-port (cdr (assoc player-name alist))))
+    (if ip-port
+        (progn
+          (setq bluesound-host (car ip-port)
+                bluesound-port (cdr ip-port))
+          (bluesound-current))
+      (error "Player %s not found" player-name))))
 
 (provide 'bluesound)
 
