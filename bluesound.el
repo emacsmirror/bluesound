@@ -205,7 +205,8 @@
     (completing-read "Play: "
                      (mapcar (lambda (album)
                                (concat (car album) "  /  " (cdr album)))
-                             (bluesound-albums)))))
+                             (bluesound-albums))
+                     nil t)))
   (when album
     (bluesound-add-album-to-queue album)
     (bluesound-current)))
@@ -224,7 +225,8 @@
   (interactive
    (list
     (completing-read "Preset: "
-                     (mapcar #'car (bluesound-presets)))))
+                     (mapcar #'car (bluesound-presets))
+                     nil t)))
   (when preset
     (when-let (id (cdr (assoc preset (bluesound-presets))))
       (bluesound--GET (concat "Preset?id=" id))
@@ -298,7 +300,8 @@
                                       (bluesound-port (cdr service)))
                                   (bluesound--attr 'name (car (bluesound--GET "SyncStatus")))))
                               (bluesound--avahi-players))
-                      #'string-lessp))))
+                      #'string-lessp)
+                     nil t)))
   (let* ((alist (mapcar (lambda (service)
                           (let ((bluesound-host (car service))
                                 (bluesound-port (cdr service)))
