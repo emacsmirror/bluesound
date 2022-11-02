@@ -125,16 +125,10 @@
    (cdr (assoc 'volume (bluesound-status)))))
 
 ;;;###autoload
-(defun bluesound-volume-up ()
-  "Turn player volume level up."
-  (interactive)
-  (bluesound-volume-set (+ (bluesound-volume) 1)))
-
-;;;###autoload
-(defun bluesound-volume-down ()
-  "Turn player volume level down."
-  (interactive)
-  (bluesound-volume-set (- (bluesound-volume) 1)))
+(defun bluesound-volume-adjust (n)
+  "Adjust player volume level by N."
+  (interactive "p")
+  (bluesound-volume-set (+ (bluesound-volume) n)))
 
 ;;;###autoload
 (defun bluesound-pause ()
@@ -161,7 +155,7 @@
       (bluesound-resume))))
 
 ;;;###autoload
-(defun bluesound-play (url)
+(defun bluesound-play-url (url)
   "Play an stream from an URL."
   (interactive "sPlay URL: ")
   (bluesound--GET (concat "Play?url="
@@ -195,7 +189,7 @@
                       (byte-to-string byte)))
                    "#ABCDEFGHIJKLMNOPQRSTUVWXYZ")))))
 
-(defun bluesound-add (album)
+(defun bluesound-add-album-to-queue (album)
   "Add ALBUM to end of player's playlist and start playing."
   (let ((artist-album (split-string album "  /  ")))
     (bluesound--GET
@@ -213,7 +207,7 @@
                                (concat (car album) "  /  " (cdr album)))
                              (bluesound-albums)))))
   (when album
-    (bluesound-add album)
+    (bluesound-add-album-to-queue album)
     (bluesound-current)))
 
 (defun bluesound-presets ()
@@ -225,7 +219,7 @@
                                 (bluesound--GET "Presets"))))
 
 ;;;###autoload
-(defun bluesound-preset (preset)
+(defun bluesound-play-preset (preset)
   "Play preset named PRESET."
   (interactive
    (list
@@ -292,7 +286,7 @@
                                                   " "))
                                     "\n"))))
 
-;;;###autoload (autoload 'bluesound/select-player "bluesound" "Select PLAYER-NAME as player." t)
+;;;###autoload
 (defun bluesound-select-player (player-name)
   "Select PLAYER-NAME as player."
   (interactive
