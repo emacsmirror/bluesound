@@ -316,6 +316,24 @@
           (bluesound-current))
       (error "Player %s not found" player-name))))
 
+(defcustom bluesound-streams nil
+  "List of streams for `bluesound-play-stream'."
+  :group 'bluesound
+  :type '(alist :key-type string :value-type string))
+
+;;;###autoload
+(defun bluesound-play-stream (stream)
+  "Play a predefined STREAM.
+Customize `bluesound-streams' to configure your own streams."
+  (interactive
+   (list
+    (completing-read "Stream: "
+                     (mapcar #'car bluesound-streams)
+                     nil t)))
+  (let ((url (cdr (assoc stream bluesound-streams))))
+    (bluesound-play-url url)
+    (bluesound-message "playing stream: %s" stream)))
+
 (provide 'bluesound)
 
 ;;; bluesound.el ends here
