@@ -119,16 +119,21 @@
   (bluesound--GET (concat "Volume?level=" (number-to-string level)))
   (bluesound-message "volume set to %d" level))
 
-(defun bluesound-volume ()
+;;;###autoload
+(defun bluesound-volume-get ()
   "Read volume from player."
-  (string-to-number
-   (cdr (assoc 'volume (bluesound-status)))))
+  (interactive)
+  (let ((level (string-to-number
+                (cdr (assoc 'volume (bluesound-status))))))
+    (when (called-interactively-p 'interactive)
+      (bluesound-message "volume set to %d" level))
+    level))
 
 ;;;###autoload
 (defun bluesound-volume-adjust (n)
   "Adjust player volume level by N."
   (interactive "p")
-  (bluesound-volume-set (+ (bluesound-volume) n)))
+  (bluesound-volume-set (+ (bluesound-volume-get) n)))
 
 ;;;###autoload
 (defun bluesound-pause ()
