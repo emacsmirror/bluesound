@@ -115,7 +115,7 @@
 ;;;###autoload
 (defun bluesound-volume-set (level)
   "Set player volume to LEVEL."
-  (interactive "nVolume level: ")
+  (interactive (list (read-number "Volume: " (bluesound-volume-get))))
   (bluesound--GET (concat "Volume?level=" (number-to-string level)))
   (bluesound-message "volume set to %d" level))
 
