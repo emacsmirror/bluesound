@@ -216,8 +216,7 @@
                              (bluesound-albums))
                      nil t)))
   (when album
-    (bluesound-add-album-to-queue album)
-    (bluesound-current)))
+    (bluesound-add-album-to-queue album)))
 
 (defun bluesound-presets ()
   "Return an alist of presets."
@@ -237,8 +236,7 @@
                      nil t)))
   (when preset
     (when-let (id (cdr (assoc preset (bluesound-presets))))
-      (bluesound--GET (concat "Preset?id=" id))
-      (bluesound-current))))
+      (bluesound--GET (concat "Preset?id=" id)))))
 
 ;;;###autoload
 (defun bluesound-next ()
