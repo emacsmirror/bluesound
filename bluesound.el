@@ -184,6 +184,11 @@
 
 (defvar bluesound-album-cache nil)
 
+(defun bluesound-clear-album-cache ()
+  "Remove cached list of albums."
+  (interactive)
+  (setq bluesound-album-cache nil))
+
 (defun bluesound-albums ()
   "Return list of all albums."
   (if bluesound-album-cache
