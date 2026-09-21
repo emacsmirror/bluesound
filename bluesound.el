@@ -85,7 +85,7 @@
 
 (defun bluesound--attr (name element)
   "Get attribute NAME from ELEMENT."
-  (when-let (value (cdr (assoc name (cadr element))))
+  (when-let* ((value (cdr (assoc name (cadr element)))))
     (decode-coding-string value 'utf-8)))
 
 (defun bluesound--text (element)
@@ -239,9 +239,8 @@
     (completing-read "Preset: "
                      (mapcar #'car (bluesound-presets))
                      nil t)))
-  (when preset
-    (when-let (id (cdr (assoc preset (bluesound-presets))))
-      (bluesound--GET (concat "Preset?id=" id)))))
+  (when-let* ((id (and preset (cdr (assoc preset (bluesound-presets))))))
+    (bluesound--GET (concat "Preset?id=" id))))
 
 ;;;###autoload
 (defun bluesound-next ()
